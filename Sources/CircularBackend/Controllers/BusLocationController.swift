@@ -9,16 +9,19 @@ import Vapor
 import Fluent
 
 extension Application {
-    var busLocation: Dictionary<String, BusLocation>? {
+    var busLocation: Dictionary<String, BusLocation> {
         get {
-            self.storage[BusLocationKey.self]
+            guard let busLocation = self.storage[BusLocationKey.self] else {
+                fatalError("Tried to access BusLocation before it is initialized")
+            }
+            
+            return busLocation
         }
         set {
             self.storage[BusLocationKey.self] = newValue
         }
     }
 }
-
 
 struct BusLocationController: RouteCollection {
     func boot(routes: any RoutesBuilder) {
@@ -32,7 +35,7 @@ struct BusLocationController: RouteCollection {
     
     @Sendable
     func get(request: Request) async -> Dictionary<String, BusLocation> {
-        return request.application.busLocation!
+        return request.application.busLocation
     }
     
     @Sendable
@@ -53,18 +56,18 @@ struct BusLocationController: RouteCollection {
             }
             
             lock.withLock {
-                request.application.busLocation![licensePlate] = busLocationRequest.toModel(busStatus: .circulating)
+                request.application.busLocation[licensePlate] = busLocationRequest.toModel(busStatus: .circulating)
             }
         }
         
         webSocket.onClose.whenComplete { result in
             if webSocket.closeCode == .normalClosure {
                 lock.withLock {
-                    request.application.busLocation![licensePlate]?.busStatus = .notCirculating
+                    request.application.busLocation[licensePlate]?.busStatus = .notCirculating
                 }
             } else if webSocket.closeCode != .init(codeNumber: 4000) {
                 lock.withLock {
-                    request.application.busLocation![licensePlate]?.busStatus = .disconnected
+                    request.application.busLocation[licensePlate]?.busStatus = .disconnected
                 }
             }
         }
