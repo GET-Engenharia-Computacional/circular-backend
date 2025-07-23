@@ -34,12 +34,12 @@ struct BusLocationController: RouteCollection {
     }
     
     @Sendable
-    func get(request: Request) async -> Dictionary<String, BusLocation> {
+    func get(request: Request) -> Dictionary<String, BusLocation> {
         return request.application.busLocation
     }
     
     @Sendable
-    func webSocket(request: Request, webSocket: WebSocket) async {
+    func webSocket(request: Request, webSocket: WebSocket) {
         let licensePlate = request.parameters.get("license-plate")!
         let lock = request.application.locks.lock(for: BusLocationLock.self)
         
