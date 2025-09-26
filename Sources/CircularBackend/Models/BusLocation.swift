@@ -11,7 +11,6 @@ import Fluent
 enum BusStatus: String, Codable {
     case notCirculating
     case circulating
-    case disconnected
 }
 
 struct BusLocation: Content {
@@ -25,6 +24,5 @@ struct BusLocation: Content {
 struct BusLocationKey: StorageKey {
     typealias Value = Dictionary<String, BusLocation>
 }
-
 
 struct BusLocationLock: LockKey {}

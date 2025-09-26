@@ -27,49 +27,45 @@ struct BusLocationController: RouteCollection {
     func boot(routes: any RoutesBuilder) {
         let busLocations = routes.grouped("bus-location")
         
-        busLocations.get(use: self.get)
-        busLocations.group(":license-plate") { busLocation in
-            busLocation.webSocket(onUpgrade: self.webSocket)
+        busLocations.get(use: self.index)
+        busLocations
+            .grouped(":license-plate")
+            .group(LicensePlate.EnsureValidLicensePlateMiddleware()) { busLocation in
+            busLocation.put(use: self.update)
+            busLocation.get("/close", use: self.close)
         }
     }
     
     @Sendable
-    func get(request: Request) -> Dictionary<String, BusLocation> {
+    func index(request: Request) -> Dictionary<String, BusLocation> {
         return request.application.busLocation
     }
     
     @Sendable
-    func webSocket(request: Request, webSocket: WebSocket) {
+    func update(request: Request) throws -> HTTPStatus {
+        let licensePlate = request.parameters.get("license-plate")!
+        guard let busLocation = try? request.content.decode(BusLocation.Request.self) else {
+            throw Abort(.badRequest, reason: "Invalid request format")
+        }
+        let lock = request.application.locks.lock(for: BusLocationLock.self)
+        
+        lock.withLock {
+            request.application.busLocation[licensePlate] = busLocation.toModel(busStatus: .circulating)
+        }
+        
+        return .ok
+    }
+    
+    @Sendable
+    func close(request: Request) -> HTTPStatus {
         let licensePlate = request.parameters.get("license-plate")!
         let lock = request.application.locks.lock(for: BusLocationLock.self)
         
-        webSocket.onText { webSocket, text in
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            
-            guard let busLocationRequest = try? decoder.decode(
-                BusLocationRequestDTO.self,
-                from: text.data(using: .utf8, allowLossyConversion: false) ?? Data()
-            ) else {
-                webSocket.close(code: .init(codeNumber: 4000), promise: nil)
-                return
-            }
-            
-            lock.withLock {
-                request.application.busLocation[licensePlate] = busLocationRequest.toModel(busStatus: .circulating)
-            }
+        lock.withLock {
+            request.application.busLocation[licensePlate]?.timestamp = .now
+            request.application.busLocation[licensePlate]?.busStatus = .notCirculating
         }
         
-        webSocket.onClose.whenComplete { result in
-            if webSocket.closeCode == .normalClosure {
-                lock.withLock {
-                    request.application.busLocation[licensePlate]?.busStatus = .notCirculating
-                }
-            } else if webSocket.closeCode != .init(codeNumber: 4000) {
-                lock.withLock {
-                    request.application.busLocation[licensePlate]?.busStatus = .disconnected
-                }
-            }
-        }
+        return .ok
     }
 }
