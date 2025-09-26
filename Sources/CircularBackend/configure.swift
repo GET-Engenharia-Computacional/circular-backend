@@ -15,6 +15,9 @@ public func configure(_ app: Application) async throws {
     ), as: .psql)
 
     app.migrations.add(BusStop.Create())
+    app.migrations.add(LicensePlate.Create())
+    app.migrations.add(User.UserType.Create())
+    app.migrations.add(User.Create())
     
     // register routes
     try routes(app)
