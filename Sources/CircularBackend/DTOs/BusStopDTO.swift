@@ -8,11 +8,13 @@
 import Vapor
 import Fluent
 
-struct BusStopResponseDTO: Content {
-    var id: UUID
-    
-    var longName: String
-    var shortName: String
-    var position: [Float]
-    var isActive: Bool
+extension BusStop {
+    struct Response: Content {
+        var id: UUID
+        
+        var longName: String
+        var shortName: String
+        var position: [Float]
+        var isActive: Bool
+    }
 }

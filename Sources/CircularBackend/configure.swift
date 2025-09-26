@@ -14,7 +14,7 @@ public func configure(_ app: Application) async throws {
         tls: .prefer(try .init(configuration: .clientDefault)))
     ), as: .psql)
 
-    app.migrations.add(CreateBusStop())
+    app.migrations.add(BusStop.Create())
     
     // register routes
     try routes(app)
