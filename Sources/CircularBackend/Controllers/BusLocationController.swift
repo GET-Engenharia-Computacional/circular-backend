@@ -31,9 +31,9 @@ struct BusLocationController: RouteCollection {
         busLocations
             .grouped(":license-plate")
             .group(LicensePlate.EnsureValidLicensePlateMiddleware()) { busLocation in
-            busLocation.put(use: self.update)
-            busLocation.get("/close", use: self.close)
-        }
+                busLocation.put(use: self.update)
+                busLocation.get("/close", use: self.close)
+            }
     }
     
     @Sendable
