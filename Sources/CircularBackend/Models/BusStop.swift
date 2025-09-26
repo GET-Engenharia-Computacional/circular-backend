@@ -57,9 +57,7 @@ final class BusStop: Model, @unchecked Sendable {
         self.updatedAt = updatedAt
     }
 
-    func toResponse() -> BusStop.Response? {
-        let teste = self.$isActive
-        
+    func toResponse() -> BusStop.Response? {        
         guard let id = self.id else {
             return nil
         }
