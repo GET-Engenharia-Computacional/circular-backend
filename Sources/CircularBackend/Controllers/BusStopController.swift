@@ -18,7 +18,7 @@ struct BusStopController: RouteCollection {
     @Sendable
     func get(request: Request) async throws -> [BusStop.Response] {
         return try await BusStop.query(on: request.db).all().map { busStop in
-            return busStop.toResponseDTO()! // this function only returns nil if id is nil, since we are fetching from the database directly id will never be nil
+            return busStop.toResponse()! // this function only returns nil if id is nil, since we are fetching from the database directly id will never be nil
         }
     }
 }
