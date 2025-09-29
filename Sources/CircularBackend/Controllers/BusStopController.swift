@@ -9,7 +9,7 @@ import Fluent
 import Vapor
 
 struct BusStopController: RouteCollection {
-    func boot(routes: any RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) {
         let busStop = routes.grouped("bus-stop")
         
         busStop.get(use: self.get)
