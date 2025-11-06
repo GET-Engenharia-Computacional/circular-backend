@@ -23,8 +23,8 @@ final class User: Model, @unchecked Sendable {
     @Enum(key: "user_type")
     var userType: User.UserType
     
-    @Field(key: "is_enabled")
-    var isEnabled: Bool
+    @Field(key: "is_active")
+    var isActive: Bool
 
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
@@ -39,15 +39,12 @@ final class User: Model, @unchecked Sendable {
         registrationNumber: String,
         passwordHash: String,
         userType: User.UserType,
-        createdAt: Date? = nil,
-        updatedAt: Date? = nil
     ) {
         self.id = id
         self.registrationNumber = registrationNumber
         self.passwordHash = passwordHash
         self.userType = userType
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
+        self.isActive = false
     }
 }
 

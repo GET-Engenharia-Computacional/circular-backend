@@ -15,7 +15,7 @@ extension User {
                 .field("registration_number", .string, .required)
                 .field("password_hash", .string, .required)
                 .field("user_type", database.enum(User.UserType.schema).read(), .required, .sql(.default("driver")))
-                .field("is_enabled", .bool, .required, .sql(.default(false)))
+                .field("is_active", .bool, .required, .sql(.default(false)))
                 .field("created_at", .datetime, .required)
                 .field("updated_at", .datetime, .required)
                 .unique(on: "registration_number")
