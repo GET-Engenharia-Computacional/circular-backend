@@ -44,8 +44,6 @@ final class BusStop: Model, @unchecked Sendable {
         latitude: Float,
         longitude: Float,
         isActive: Bool,
-        createdAt: Date? = nil,
-        updatedAt: Date? = nil
     ) {
         self.id = id
         self.longName = longName
@@ -53,8 +51,6 @@ final class BusStop: Model, @unchecked Sendable {
         self.latitude = latitude
         self.longitude = longitude
         self.isActive = isActive
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
     }
 
     func toResponse() -> BusStop.Response? {        
