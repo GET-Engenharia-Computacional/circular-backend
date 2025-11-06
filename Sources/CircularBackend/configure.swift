@@ -18,6 +18,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(LicensePlate.Create())
     app.migrations.add(User.UserType.Create())
     app.migrations.add(User.Create())
+    app.migrations.add(UserToken.Create())
     
     // register routes
     try routes(app)
