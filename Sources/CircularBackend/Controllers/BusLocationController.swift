@@ -30,7 +30,11 @@ struct BusLocationController: RouteCollection {
         busLocations.get(use: self.index)
         busLocations
             .grouped(":license-plate")
-            .group(LicensePlate.EnsureValidLicensePlateMiddleware()) { busLocation in
+            .group(
+                LicensePlate.EnsureValidLicensePlateMiddleware(),
+                UserToken.authenticator(),
+                UserToken.guardMiddleware(throwing: Abort(.unauthorized, reason: "Unauthorized"))
+            ) { busLocation in
                 busLocation.post(use: self.update)
                 busLocation.post("close", use: self.close)
             }
