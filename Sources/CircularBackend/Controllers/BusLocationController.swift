@@ -46,7 +46,7 @@ struct BusLocationController: RouteCollection {
     }
     
     @Sendable
-    func update(request: Request) throws -> HTTPStatus {
+    func update(request: Request) throws(Abort) -> HTTPStatus {
         let licensePlate = request.parameters.get("license-plate")!
         guard let busLocation = try? request.content.decode(BusLocation.Request.self) else {
             throw Abort(.badRequest, reason: "Malformed request")
