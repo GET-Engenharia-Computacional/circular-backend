@@ -49,7 +49,7 @@ struct BusLocationController: RouteCollection {
     func update(request: Request) throws -> HTTPStatus {
         let licensePlate = request.parameters.get("license-plate")!
         guard let busLocation = try? request.content.decode(BusLocation.Request.self) else {
-            throw Abort(.badRequest, reason: "Invalid request format")
+            throw Abort(.badRequest, reason: "Malformed request")
         }
         let lock = request.application.locks.lock(for: BusLocationLock.self)
         
