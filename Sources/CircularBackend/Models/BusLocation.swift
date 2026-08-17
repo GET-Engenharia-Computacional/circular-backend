@@ -15,6 +15,7 @@ enum BusStatus: String, Codable {
 
 struct BusLocation: Content {
     var busStatus: BusStatus
+    var busLine: String
     var position: [Float]
     var timestamp: Date
     var speed: Float

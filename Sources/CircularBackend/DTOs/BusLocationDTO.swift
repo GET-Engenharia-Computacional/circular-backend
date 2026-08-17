@@ -10,6 +10,7 @@ import Fluent
 
 extension BusLocation {
     struct Request: Content {
+        var busLine: String
         var position: [Float]
         var timestamp: Date
         var speed: Float
@@ -18,6 +19,7 @@ extension BusLocation {
         func toModel(busStatus: BusStatus) -> BusLocation {
             .init(
                 busStatus: busStatus,
+                busLine: self.busLine,
                 position: self.position,
                 timestamp: self.timestamp,
                 speed: self.speed,

@@ -38,7 +38,7 @@ final class User: Model, @unchecked Sendable {
         id: UUID? = nil,
         registrationNumber: String,
         passwordHash: String,
-        userType: User.UserType,
+        userType: User.UserType
     ) {
         self.id = id
         self.registrationNumber = registrationNumber

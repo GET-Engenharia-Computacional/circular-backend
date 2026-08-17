@@ -43,7 +43,7 @@ final class BusStop: Model, @unchecked Sendable {
         shortName: String,
         latitude: Float,
         longitude: Float,
-        isActive: Bool,
+        isActive: Bool
     ) {
         self.id = id
         self.longName = longName
