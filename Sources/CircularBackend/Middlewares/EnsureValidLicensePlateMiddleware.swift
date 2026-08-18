@@ -9,7 +9,7 @@ import Vapor
 
 extension LicensePlate {
     struct EnsureValidLicensePlateMiddleware: AsyncMiddleware {
-        func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
+        func respond(to request: Vapor.Request, chainingTo next: any AsyncResponder) async throws -> Vapor.Response {
             guard
                 let licensePlate = request.parameters.get("license-plate"),
                 LicensePlate.isValidLicensePlateFormat(licensePlate)

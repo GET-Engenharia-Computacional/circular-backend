@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:circular-backend}",
+            "name": "Debug CircularBackend",
+            "target": "CircularBackend",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug CircularBackend"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:circular-backend}",
+            "name": "Release CircularBackend",
+            "target": "CircularBackend",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release CircularBackend"
+        }
+    ]
+}

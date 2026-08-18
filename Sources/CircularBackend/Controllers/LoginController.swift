@@ -26,6 +26,6 @@ struct LoginController: RouteCollection {
             throw Abort(.internalServerError)
         }
         
-        return token.toResponse()
+        return .init(token: token.value, userType: user.userType)
     }
 }

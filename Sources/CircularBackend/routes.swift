@@ -7,4 +7,6 @@ func routes(_ app: Application) throws {
     try app.register(collection: LoginController())
     try app.register(collection: BusLocationController())
     try app.register(collection: BusStopController())
+    try app.register(collection: BusLineController())
+    try app.register(collection: LicensePlateController())
 }
