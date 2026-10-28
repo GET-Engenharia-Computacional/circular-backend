@@ -1,0 +1,7 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "cacheDirectory": "<rootDir>/.cache/jest-integration",
+  "testMatch": ["**/test/integration/*.spec.ts"],
+  "testTimeout": 30000
+}

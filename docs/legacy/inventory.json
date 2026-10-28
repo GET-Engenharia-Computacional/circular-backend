@@ -1,0 +1,146 @@
+{
+  "commit": "b39d0152ab4736df37120efd61f07c0e25272f08",
+  "scope": "Swift sources, tests, database seed and build configuration; no credentials or database dumps",
+  "files": [
+    {
+      "path": "Dockerfile",
+      "sha256": "fcdbdc93f249cebe472c7567da192444db2264d0ea9de8ad6cddf29a46ec3997"
+    },
+    {
+      "path": "Package.swift",
+      "sha256": "eedd9d90900571c884d133f54d95644c9f16de0e14f6b36b9d1251ff271ce2c6"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/BusLineController.swift",
+      "sha256": "7cbbe87370efdc8b6ce7b62f4c98e2f554ae13eb04cfc9c2b417548faea9a8f4"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/BusLocationController.swift",
+      "sha256": "6500a1b172fd13d346d7b7bda75c700406dd039b531432d765cb4c7abacff17f"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/BusStopController.swift",
+      "sha256": "7b84a4c63caf93d220bdaa13266e227a8e04e98e542a4dc0785dc8f848b536ba"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/LicensePlateController.swift",
+      "sha256": "1258f95d8a721a7b3c3aaffc1adbbd328ad3b383b6717f7be5bd5a18dca4f994"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/LoginController.swift",
+      "sha256": "5f515599e31fb36899520b4c6d640839199f5c413ce8ee58b38477e86648c943"
+    },
+    {
+      "path": "Sources/CircularBackend/Controllers/RegisterController.swift",
+      "sha256": "f78bc5649451dc8f106b91e968a1bc448f1b4763711ec96cc697ef68ff351c90"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/BusLineDTO.swift",
+      "sha256": "b9b76ae5c1dbc67fa3d31d66f40b6ee5306e59711be3336541950481e42b320b"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/BusLocationDTO.swift",
+      "sha256": "18289299749bd13d724d6ec6fe072841c9d6597519376e7b4ef0a890d3df1005"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/BusStopDTO.swift",
+      "sha256": "bcd21a75ac0d5419f73541568aedbcad00b71262304b1f9566eb707778e1f236"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/LicensePlateDTO.swift",
+      "sha256": "dd6e8bad0b03f9c2c9ad86411efd1d5198ef4d1bae18e37730ab8d2fcd373b02"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/UserDTO.swift",
+      "sha256": "31c890700f23ddf973c3f79638b8ca96721c4bce2678ddc8abf02e980d3c7456"
+    },
+    {
+      "path": "Sources/CircularBackend/DTOs/UserTokenDTO.swift",
+      "sha256": "dd58c0288dcbcacbaab3116ac0abbd966b938fea99cac54e1e4a2ac96f1a6510"
+    },
+    {
+      "path": "Sources/CircularBackend/Middlewares/EnsureAdminMiddleware.swift",
+      "sha256": "366f9485f98a7aead610488921f1bf7f1036e1af637fa5abbc58c35d48cbd8e0"
+    },
+    {
+      "path": "Sources/CircularBackend/Middlewares/EnsureValidLicensePlateMiddleware.swift",
+      "sha256": "40e8579f697884108a02bc9ee8b1ed8ca1cb9aead4c25a1e5a9a8fcfb06d5aa6"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateBusLine.swift",
+      "sha256": "e1e1c17f8ca93ff9c6e1e4ffc541ab9183488f329e5a06b96d523b00342c53cf"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateBusStop.swift",
+      "sha256": "2ebb95bddbae72870e762600cc2af0583c6e1510433651550ea468dacba07ec4"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateLicensePlate.swift",
+      "sha256": "c0264104d17fb8ad739882628de03a00c145d766f58d33bb41211fe0662f6c8c"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateUser.swift",
+      "sha256": "bcbadf84971acacf63f52dad50da95b450ad1d7f64758e33cd91cbdc6bce33c7"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateUserToken.swift",
+      "sha256": "40a50febc36c036a771ae3fda9083129eddd76a8bd19b57917bed5b8c87faf9f"
+    },
+    {
+      "path": "Sources/CircularBackend/Migrations/CreateUserType.swift",
+      "sha256": "f7d28740ce77daba4a6e0edfbdbbf30a701e8c2198b2c1b45157d14e93824df1"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/BusLine.swift",
+      "sha256": "d675eec03869c9cc6472976b9a40effb9f2c27d0e5e56cb91825817ac22b253c"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/BusLocation.swift",
+      "sha256": "066368f9a7051a8fe29d70c99d191f668e815c39255819ccaeff5353bb1d5f92"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/BusStop.swift",
+      "sha256": "ba76f9a164e1742c4a49651ac1e2b8a324cdcbaf45e78af3678bdfc7f486837a"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/LicensePlate.swift",
+      "sha256": "cd0fd8ca6bd9c89e117c72c77474bf3da53b31b2b615defc75bdda99b803b239"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/User.swift",
+      "sha256": "64c9dd01fde2e1d900be14ac2f5c5ee8d3145f3d50a9d1310482d736a222b77d"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/UserToken.swift",
+      "sha256": "fd8e7064306185d741dcde45da6eb390bfa727502e212299f37946a142a5e303"
+    },
+    {
+      "path": "Sources/CircularBackend/Models/UserType.swift",
+      "sha256": "a999c690cd139caa3779ce4a10310d6a837952ecf7d10e7db848ab7b201adb48"
+    },
+    {
+      "path": "Sources/CircularBackend/configure.swift",
+      "sha256": "124566068a0b17d34e1543aec586ee18087e15764f9edf35967df9ea42791e9e"
+    },
+    {
+      "path": "Sources/CircularBackend/entrypoint.swift",
+      "sha256": "4fb9f6a1d5dc60ea0b9ee058e3205cfef1ddc005fe38aed707d619ddbbb41733"
+    },
+    {
+      "path": "Sources/CircularBackend/routes.swift",
+      "sha256": "38e79de2bced108946e298908cdd3ec5932585d4eefc30931cb844ace6a7eba9"
+    },
+    {
+      "path": "Tests/CircularBackendTests/CircularBackendTests.swift",
+      "sha256": "fc10e9456aa8b9318110b78cc0a78aba075d6a51789ddc55cb165258317bad74"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "529dae439c6b7d54925c2b9354d9f6bb7f30e057288f1b0ec85891fa5bc8337a"
+    },
+    {
+      "path": "seed_bus_stops.sql",
+      "sha256": "9ddf5b2ffa5c000019bbca3189d2bb21e95e33b731c409a6a0c9b4ae0bf5ac69"
+    }
+  ]
+}
