@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard, RolesGuard } from './guards';
-import { jwtSecret } from '../config';
+import { jwtSecret, sessionTtlSeconds } from '../config';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { jwtSecret } from '../config';
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: jwtSecret(),
-        signOptions: { expiresIn: 3600, algorithm: 'HS256' },
+        signOptions: { expiresIn: sessionTtlSeconds, algorithm: 'HS256' },
         verifyOptions: { algorithms: ['HS256'] },
       }),
     }),

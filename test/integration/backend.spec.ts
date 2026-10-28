@@ -8,6 +8,8 @@ import { io, Socket } from 'socket.io-client';
 import * as bcrypt from 'bcrypt';
 import { AppModule } from '../../src/app.module';
 import dataSource from '../../src/database/data-source';
+import { importCampusPlaces } from '../../src/database/import-campus-places';
+import { importLegacyStops } from '../../src/database/legacy/import-stops';
 import { TelemetryService } from '../../src/telemetry/telemetry.service';
 
 interface Ack {
@@ -160,6 +162,53 @@ describe('Native MySQL spatial + HTTP + Socket.io', () => {
     else if (dataSource.isInitialized) await dataSource.destroy();
   });
 
+  it('registers passengers without granting driver privileges and returns all 25 stops', async () => {
+    await request(url)
+      .post('/auth/register')
+      .send({
+        registrationNumber: 'student',
+        password: 'password123',
+        passwordConfirmation: 'password123',
+        accountType: 'passenger',
+      })
+      .expect(201);
+    const login = await request(url)
+      .post('/auth/login')
+      .send({ registrationNumber: 'student', password: 'password123' })
+      .expect(201);
+    expect(login.body.userType).toBe('passenger');
+    await request(url)
+      .post('/bus-location/sessions')
+      .auth(login.body.token, { type: 'bearer' })
+      .send({ licensePlate: plate, busLineId: lineId })
+      .expect(403);
+    await request(url)
+      .post('/forum/posts')
+      .auth(login.body.token, { type: 'bearer' })
+      .send({ title: 'Passageiro', content: 'Pergunta de teste' })
+      .expect(201);
+    await request(url)
+      .post('/auth/register')
+      .send({
+        registrationNumber: 'escalation',
+        password: 'password123',
+        passwordConfirmation: 'password123',
+        accountType: 'admin',
+      })
+      .expect(400);
+    await importLegacyStops(db);
+    const stops = (await request(url).get('/bus-stops').expect(200)).body;
+    expect(stops).toHaveLength(25);
+    expect(stops.some((s: { isActive: boolean }) => !s.isActive)).toBe(true);
+    await importCampusPlaces(db);
+    await importCampusPlaces(db);
+    const places = (await request(url).get('/campus-places?limit=100').expect(200)).body;
+    expect(places).toHaveLength(7);
+    expect(places.some((p: { name: string }) => p.name.includes('NPJ'))).toBe(true);
+    await db.query('DELETE FROM forum_posts');
+    await db.query('DELETE FROM campus_places');
+    await db.query('DELETE FROM bus_stops');
+  });
   it('enforces JWT, role and activation on HTTP', async () => {
     await request(url)
       .post('/bus-lines')

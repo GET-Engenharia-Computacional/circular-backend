@@ -16,7 +16,8 @@
     "db:check": "ts-node src/database/check.ts",
     "schema:export": "ts-node src/database/export-schema.ts",
     "seed:legacy-stops": "ts-node src/database/seed-legacy-stops.ts",
-    "schema:export:legacy-stops": "ts-node src/database/export-legacy-stops.ts"
+    "schema:export:legacy-stops": "ts-node src/database/export-legacy-stops.ts",
+    "seed:campus-places": "ts-node src/database/seed-campus-places.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

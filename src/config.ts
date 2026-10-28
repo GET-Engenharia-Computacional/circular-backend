@@ -12,3 +12,6 @@ export const corsOrigins = () =>
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean);
+
+// Persistent sign-in; authorization is still checked against the active user.
+export const sessionTtlSeconds = 30 * 24 * 60 * 60;

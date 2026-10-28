@@ -19,7 +19,7 @@ export class BusStopsService {
   constructor(private readonly db: DataSource) {}
   async list() {
     const rows: SpatialRow[] = await this.db.query(
-      `SELECT ${fields} FROM bus_stops WHERE is_active ORDER BY long_name`,
+      `SELECT ${fields} FROM bus_stops ORDER BY long_name`,
     );
     return rows.map(spatialResult);
   }

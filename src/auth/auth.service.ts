@@ -1,3 +1,4 @@
+import { sessionTtlSeconds } from '../config';
 import { randomUUID } from 'node:crypto';
 import { mysqlCode } from '../database/mysql';
 import {
@@ -39,15 +40,18 @@ export class AuthService {
     const hash = await bcrypt.hash(dto.password, 12);
     try {
       const id = randomUUID();
+      const passenger = dto.accountType === 'passenger';
       await this.db.query(
-        `INSERT INTO users(id,registration_number,password_hash,user_type_id)
-        VALUES (?,?,?,(SELECT id FROM user_types WHERE name='driver'))`,
-        [id, dto.registrationNumber, hash],
+        `INSERT INTO users(id,registration_number,password_hash,user_type_id,is_active)
+        VALUES (?,?,?,(SELECT id FROM user_types WHERE name=?),?)`,
+        [id, dto.registrationNumber, hash, passenger ? 'passenger' : 'driver', passenger],
       );
       return {
         id,
-        isActive: false,
-        message: 'Cadastro pendente de ativação pelo administrador.',
+        isActive: passenger,
+        message: passenger
+          ? 'Conta criada. Entre para participar do fórum.'
+          : 'Cadastro pendente de ativação pelo administrador.',
       };
     } catch (error) {
       if (mysqlCode(error) === 'ER_DUP_ENTRY')
@@ -67,7 +71,7 @@ export class AuthService {
       registrationNumber: row.registration_number,
       userType: row.user_type,
     });
-    return { token, accessToken: token, userType: row.user_type, expiresIn: 3600 };
+    return { token, accessToken: token, userType: row.user_type, expiresIn: sessionTtlSeconds };
   }
   async activeUser(id: string): Promise<AuthUser> {
     const [row]: UserRow[] = await this.db.query(

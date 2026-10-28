@@ -202,3 +202,14 @@ npm run seed:legacy-stops
 ```
 
 Alternativa para Workbench: `sql/seed-legacy-stops.sql`. Administradores podem consultar ativas e inativas em `GET /admin/bus-stops?limit=100`. As coordenadas recuperadas não foram confirmadas por levantamento de campo.
+
+## Revisão integrada de 28/10/2026
+
+- O catálogo público de paradas inclui registros inativos com isActive=false. A interface os identifica; consultas de proximidade e indicações de embarque usam apenas as paradas ativas.
+- POST /auth/register aceita accountType=passenger para cadastro ativo de participante do fórum. O padrão permanece driver, inativo até aprovação administrativa; admin não é aceito. O acesso à telemetria do motorista continua protegido por papel e frota autorizada.
+- npm run seed:campus-places popula sete locais de forma idempotente, preservando registros existentes. Use -- --dry-run para revisar. Fontes e precisão constam em src/database/campus-places.ts. Biblioteca Central e Engenharia possuem coordenadas publicadas; RU, ICH, biblioteca do ICH e NPJ ainda usam referências aproximadas explicitadas na descrição. Confirmar suas entradas no campus e o número 988 do NPJ antes de tratar como navegação precisa.
+- Validado em MySQL temporário separado: npm run test:integration. Não executar com o banco de desenvolvimento; a suíte exige sufixo _test e ALLOW_INTEGRATION_DB_RESET=true.
+- A suíte de navegador no passageiro (npm run test:integration) inicia NestJS e as duas interfaces reais e exige DATABASE_URL de um banco _test já migrado. Ela verifica iniciar viagem, GPS, persistência espacial, marcador e encerramento. Não requer ALLOW_INTEGRATION_DB_RESET porque remove apenas as fixtures que cria. Pare outros servidores nas portas 3001, 5183 e 33308 antes de executar.
+- A comparação visual foi feita com os arquivos Flutter: Roboto local, cabeçalho vermelho Cadê o Circular?, Painel do Motorista, botão circular e cartões. Não foi certificada equivalência de pixels. GPS e Wake Lock ainda precisam de teste físico durante um trajeto.
+
+Tiles: tema claro usa OpenStreetMap; escuro usa Alidade Smooth Dark (Stadia). Em produção configure domínio autorizado ou NEXT_PUBLIC_STADIA_API_KEY no passageiro; NEXT_PUBLIC_MAP_DARK_TILE_URL substitui a URL inteira. CARTO deixou de ser o padrão pois exige chave desde setembro/2026. Ver https://docs.stadiamaps.com/authentication/ e https://www.carto.com/basemaps/apikey/index.html.
