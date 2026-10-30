@@ -30,6 +30,7 @@ describe('Socket.io transport and room isolation', () => {
     current: jest.fn().mockResolvedValue({}),
     start: jest.fn().mockResolvedValue({ sessionId: 'session' }),
     ingest: jest.fn(),
+    syncBatch: jest.fn().mockResolvedValue({ accepted: 1 }),
     heartbeat: jest.fn().mockResolvedValue({}),
     close: jest.fn(),
   };
@@ -77,6 +78,37 @@ describe('Socket.io transport and room isolation', () => {
   });
   afterAll(async () => {
     await app?.close();
+  });
+  it('sync batch validates nested records and requires authenticated driver ownership', async () => {
+    const payload = {
+      licensePlate: 'ABC-1D23',
+      records: [
+        {
+          position: [-43.37, -21.77],
+          speed: 20,
+          headingTowards: 90,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+    const driver = await connect('valid');
+    expect((await emit(driver, 'driver:sync-batch', payload)).ok).toBe(true);
+    expect(telemetry.syncBatch).toHaveBeenCalledWith(
+      user,
+      expect.objectContaining(payload),
+      expect.any(String),
+    );
+    expect(
+      (
+        await emit(driver, 'driver:sync-batch', {
+          ...payload,
+          records: [{ ...payload.records[0], speed: 90 }],
+        })
+      ).error?.status,
+    ).toBe(400);
+    const anonymous = await connect();
+    expect((await emit(anonymous, 'driver:sync-batch', payload)).error?.status).toBe(401);
+    expect(telemetry.syncBatch).toHaveBeenCalledTimes(1);
   });
   it('validates before invoking the driver operation and passes socket ownership', async () => {
     const driver = await connect('valid');
@@ -143,6 +175,14 @@ describe('Socket.io transport and room isolation', () => {
     expect(await generalEvent).toEqual(update);
     expect(await lineEvent).toEqual(update);
     expect(mismatched).not.toHaveBeenCalled();
+    const wrongRoute = jest.fn();
+    other.on('passenger:route-updated', wrongRoute);
+    const generalRoute = new Promise((resolve) => general.once('passenger:route-updated', resolve));
+    const lineRoute = new Promise((resolve) => line.once('passenger:route-updated', resolve));
+    events.emit({ name: 'passenger:route-updated', data: { busLineId: lineId } });
+    expect(await generalRoute).toEqual({ busLineId: lineId });
+    expect(await lineRoute).toEqual({ busLineId: lineId });
+    expect(wrongRoute).not.toHaveBeenCalled();
     await emit(general, 'passenger:subscribe', {
       busLineId: '74da64c4-b72a-42f9-a762-51c4fa61e254',
     });

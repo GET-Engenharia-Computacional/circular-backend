@@ -30,6 +30,7 @@ export class StopDto {
   @IsBoolean() isActive = true;
 }
 export class PlaceDto {
+  @IsBoolean() isActive = true;
   @IsString() @Length(1, 150) @Matches(/\S/) name!: string;
   @IsString() @Length(1, 50) @Matches(/\S/) category!: string;
   @IsArray()

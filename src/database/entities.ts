@@ -35,6 +35,15 @@ export class BusStopEntity extends Identified {
   @Column({ type: 'point', srid: 4326 }) location!: Point;
   @Column({ default: true }) is_active!: boolean;
 }
+@Entity('bus_line_stops')
+@Index('line_stop_unique', ['busLineId', 'busStopId', 'stopSequence'], { unique: true })
+export class BusLineStop {
+  @PrimaryColumn({ name: 'bus_line_id', type: 'char', length: 36 }) busLineId!: string;
+  @PrimaryColumn({ name: 'stop_sequence', type: 'int' }) stopSequence!: number;
+  @Column({ name: 'bus_stop_id', type: 'char', length: 36 }) busStopId!: string;
+  @Column({ name: 'estimated_minutes_from_previous', type: 'int', nullable: true })
+  estimatedMinutesFromPrevious!: number | null;
+}
 @Entity('driver_sessions')
 @Index('one_session_per_vehicle', ['active_vehicle'], { unique: true })
 @Index('one_session_per_driver', ['active_driver'], { unique: true })
@@ -72,6 +81,7 @@ export class DriverSessionEntity extends Identified {
   @Column({ type: 'datetime', precision: 3, nullable: true }) closed_at!: Date | null;
 }
 @Entity('bus_locations')
+@Index('telemetry_sample_once', ['session_id', 'timestamp', 'bus_status'], { unique: true })
 export class BusLocationEntity extends Identified {
   @Column({ type: 'char', length: 36 }) session_id!: string;
   @Column({ length: 8 }) license_plate!: string;
@@ -86,6 +96,7 @@ export class BusLocationEntity extends Identified {
 }
 @Entity('campus_places')
 export class CampusPlaceEntity extends Identified {
+  @Column({ default: true }) is_active!: boolean;
   @Column({ length: 150 }) name!: string;
   @Column({ length: 50 }) category!: string;
   @Column({ type: 'point', srid: 4326 }) location!: Point;
@@ -113,6 +124,7 @@ export const entities = [
   LicensePlateEntity,
   BusLineEntity,
   BusStopEntity,
+  BusLineStop,
   DriverSessionEntity,
   BusLocationEntity,
   CampusPlaceEntity,

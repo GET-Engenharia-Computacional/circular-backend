@@ -4,7 +4,7 @@ async function check() {
   const connection = process.env.DATABASE_URL
     ? await createConnection(process.env.DATABASE_URL)
     : await createConnection({
-        host: process.env.DATABASE_HOST ?? '127.0.0.1',
+        host: process.env.DATABASE_HOST ?? 'localhost',
         port: Number(process.env.DATABASE_PORT ?? 3306),
         user: process.env.DATABASE_USERNAME ?? 'localizaufjf',
         password: process.env.DATABASE_PASSWORD,

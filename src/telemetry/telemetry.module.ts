@@ -9,5 +9,6 @@ import { TelemetryEvents } from './telemetry.events';
   imports: [AuthModule],
   controllers: [BusLocationController],
   providers: [TelemetryService, TelemetryEvents, BusLocationGateway],
+  exports: [TelemetryEvents],
 })
 export class TelemetryModule {}

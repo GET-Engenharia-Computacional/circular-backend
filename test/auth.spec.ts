@@ -14,6 +14,16 @@ describe('Authentication', () => {
     query.mockReset();
     signAsync.mockClear();
   });
+  it('confirms the admin password against the active database account', async () => {
+    query.mockResolvedValue([{ password_hash: await bcrypt.hash('correct-password', 4) }]);
+    await expect(auth.confirmAdminPassword('admin', 'wrong')).rejects.toThrow('Senha');
+    await expect(auth.confirmAdminPassword('admin', 'correct-password')).resolves.toBeUndefined();
+    expect(query.mock.calls[0][0]).toContain("t.name='admin'");
+    query.mockResolvedValue([]);
+    await expect(auth.confirmAdminPassword('inactive', 'correct-password')).rejects.toThrow(
+      'Senha',
+    );
+  });
   it('blocks inactive accounts even with the correct password', async () => {
     query.mockResolvedValue([
       { id: 'user', password_hash: await bcrypt.hash('password123', 4), is_active: false },

@@ -1,21 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { NearbyQuery, PageQuery } from '../common/dto';
-import {
-  MutationResult,
-  SpatialRow,
-  ensureUpdated,
-  mysqlCode,
-  pointSql,
-  pointWkt,
-  spatialResult,
-} from '../database/mysql';
-import { LineDto, PlateDto, PlaceDto } from './catalog.dto';
-import { checkPosition } from './bus-stops.service';
+import { PageQuery } from '../common/dto';
+import { MutationResult, ensureUpdated, mysqlCode } from '../database/mysql';
+import { LineDto, PlateDto } from './catalog.dto';
+import { loadRoute } from './route';
+import { loadRouteGeometry } from './route-geometry';
 @Injectable()
 export class CatalogService {
   constructor(private readonly db: DataSource) {}
+  async route(id: string) {
+    if (!(await this.db.query('SELECT id FROM bus_lines WHERE id=? AND is_active', [id])).length)
+      throw new NotFoundException('Active bus line not found');
+    return loadRoute(this.db, id);
+  }
+  async geometry(id: string) {
+    if (!(await this.db.query('SELECT id FROM bus_lines WHERE id=? AND is_active', [id])).length)
+      throw new NotFoundException('Active bus line not found');
+    return { coordinates: (await loadRouteGeometry(this.db, id)).map((point) => point.position) };
+  }
   async lines() {
     const rows = await this.db.query(
       'SELECT id,code,name,is_active AS isActive FROM bus_lines WHERE is_active ORDER BY name',
@@ -25,6 +28,12 @@ export class CatalogService {
   async plates() {
     const rows = await this.db.query(
       'SELECT id,plate AS licensePlate,is_active AS isActive FROM license_plates WHERE is_active ORDER BY plate',
+    );
+    return rows.map((r: { isActive: number }) => ({ ...r, isActive: !!r.isActive }));
+  }
+  async adminPlates() {
+    const rows = await this.db.query(
+      'SELECT id,plate AS licensePlate,is_active AS isActive FROM license_plates ORDER BY plate',
     );
     return rows.map((r: { isActive: number }) => ({ ...r, isActive: !!r.isActive }));
   }
@@ -111,29 +120,5 @@ export class CatalogService {
     ]);
     await ensureUpdated(this.db, result, 'users', id);
     return { id, isActive };
-  }
-  async places(q: PageQuery) {
-    const rows: SpatialRow[] = await this.db.query(
-      'SELECT id,name,category,description,ST_Longitude(location) AS lng,ST_Latitude(location) AS lat FROM campus_places ORDER BY name,id LIMIT ? OFFSET ?',
-      [q.limit, q.offset],
-    );
-    return rows.map(spatialResult);
-  }
-  async nearbyPlaces(q: NearbyQuery) {
-    const rows: SpatialRow[] = await this.db.query(
-      `SELECT id,name,category,description,ST_Longitude(location) AS lng,ST_Latitude(location) AS lat,
-    ST_Distance_Sphere(location,${pointSql}) AS distanceMeters FROM campus_places HAVING distanceMeters<=? ORDER BY distanceMeters,id LIMIT 100`,
-      [pointWkt([q.lng, q.lat]), q.radius],
-    );
-    return rows.map(spatialResult);
-  }
-  async createPlace(dto: PlaceDto) {
-    checkPosition(dto.position);
-    const id = randomUUID();
-    await this.db.query(
-      `INSERT INTO campus_places(id,name,category,description,location) VALUES (?,?,?,?,${pointSql})`,
-      [id, dto.name, dto.category, dto.description ?? null, pointWkt(dto.position)],
-    );
-    return { ...dto, id };
   }
 }

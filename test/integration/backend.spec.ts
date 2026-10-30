@@ -96,6 +96,7 @@ describe('Native MySQL spatial + HTTP + Socket.io', () => {
       'campus_places',
       'bus_locations',
       'driver_sessions',
+      'bus_line_stops',
       'bus_stops',
       'bus_lines',
       'license_plates',

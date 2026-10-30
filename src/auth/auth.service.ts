@@ -81,6 +81,15 @@ export class AuthService {
     if (!row) throw new UnauthorizedException('Inactive or unknown user');
     return { id: row.id, registrationNumber: row.registration_number, userType: row.user_type };
   }
+  async confirmAdminPassword(id: string, password: string): Promise<void> {
+    const [row]: UserRow[] = await this.db.query(
+      `SELECT u.password_hash FROM users u JOIN user_types t ON t.id=u.user_type_id
+       WHERE u.id=? AND u.is_active=true AND t.name='admin'`,
+      [id],
+    );
+    if (!row || !(await bcrypt.compare(password, row.password_hash)))
+      throw new BadRequestException('Senha do administrador incorreta.');
+  }
   async verifyToken(token: string): Promise<AuthUser> {
     try {
       const claims = await this.jwt.verifyAsync<{ sub: string }>(token);

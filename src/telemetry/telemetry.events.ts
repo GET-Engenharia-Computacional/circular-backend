@@ -9,6 +9,7 @@ export interface LocationUpdate {
   speed: number;
   headingTowards: number;
   timestamp: string;
+  is_off_route?: boolean;
 }
 export interface BusOffline {
   licensePlate: string;
@@ -17,6 +18,7 @@ export interface BusOffline {
   reason: 'closed' | 'timeout' | 'authorization-revoked';
 }
 export type TelemetryEvent =
+  | { name: 'passenger:route-updated'; data: { busLineId: string } }
   | { name: 'passenger:location-update'; data: LocationUpdate }
   | { name: 'passenger:bus-offline'; data: BusOffline };
 

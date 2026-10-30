@@ -17,7 +17,9 @@
     "schema:export": "ts-node src/database/export-schema.ts",
     "seed:legacy-stops": "ts-node src/database/seed-legacy-stops.ts",
     "schema:export:legacy-stops": "ts-node src/database/export-legacy-stops.ts",
-    "seed:campus-places": "ts-node src/database/seed-campus-places.ts"
+    "seed:campus-places": "ts-node src/database/seed-campus-places.ts",
+    "route:set": "ts-node src/database/set-line-route.ts",
+    "simulate:driver": "ts-node src/simulate-driver.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

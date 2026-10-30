@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard, RolesGuard } from './guards';
+import { AdminPasswordGuard } from './admin-password.guard';
 import { jwtSecret, sessionTtlSeconds } from '../config';
 
 @Module({
@@ -19,7 +20,7 @@ import { jwtSecret, sessionTtlSeconds } from '../config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
-  exports: [AuthService, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, AdminPasswordGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard, AdminPasswordGuard],
 })
 export class AuthModule {}

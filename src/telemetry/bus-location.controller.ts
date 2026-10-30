@@ -2,12 +2,16 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/comm
 import { Request } from 'express';
 import { AuthUser } from '../auth/auth.service';
 import { JwtAuthGuard, Roles, RolesGuard } from '../auth/guards';
-import { RestLocationDto, StartSessionDto, VehicleDto } from './telemetry.dto';
+import { BatchLocationDto, RestLocationDto, StartSessionDto, VehicleDto } from './telemetry.dto';
 import { TelemetryService } from './telemetry.service';
+import { IdParam } from '../catalog/catalog.dto';
 
 @Controller('bus-location')
 export class BusLocationController {
   constructor(private readonly telemetry: TelemetryService) {}
+  @Get('arrivals/:id') arrivals(@Param() p: IdParam) {
+    return this.telemetry.arrivals(p.id);
+  }
   @Get() current() {
     return this.telemetry.current();
   }
@@ -16,6 +20,12 @@ export class BusLocationController {
   @Roles('driver', 'admin')
   start(@Req() req: Request & { user: AuthUser }, @Body() dto: StartSessionDto) {
     return this.telemetry.start(req.user, dto);
+  }
+  @Post('batch')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('driver', 'admin')
+  syncBatch(@Req() req: Request & { user: AuthUser }, @Body() dto: BatchLocationDto) {
+    return this.telemetry.syncBatch(req.user, dto);
   }
   @Post(':licensePlate')
   @UseGuards(JwtAuthGuard, RolesGuard)

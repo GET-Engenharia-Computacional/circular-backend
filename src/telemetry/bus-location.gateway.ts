@@ -15,7 +15,13 @@ import { AuthService, AuthUser } from '../auth/auth.service';
 import { corsOrigins } from '../config';
 import { TelemetryService } from './telemetry.service';
 import { TelemetryEvents } from './telemetry.events';
-import { LocationDto, StartSessionDto, SubscribeDto, VehicleDto } from './telemetry.dto';
+import {
+  BatchLocationDto,
+  LocationDto,
+  StartSessionDto,
+  SubscribeDto,
+  VehicleDto,
+} from './telemetry.dto';
 
 @WebSocketGateway({ cors: { origin: corsOrigins() }, maxHttpBufferSize: 16384 })
 export class BusLocationGateway
@@ -109,6 +115,12 @@ export class BusLocationGateway
   heartbeat(@ConnectedSocket() socket: Socket, @MessageBody() payload: unknown) {
     return this.run(socket, payload, VehicleDto, async (dto) =>
       this.telemetry.heartbeat(await this.driver(socket), dto.licensePlate, socket.id),
+    );
+  }
+  @SubscribeMessage('driver:sync-batch')
+  syncBatch(@ConnectedSocket() socket: Socket, @MessageBody() payload: unknown) {
+    return this.run(socket, payload, BatchLocationDto, async (dto) =>
+      this.telemetry.syncBatch(await this.driver(socket), dto, socket.id),
     );
   }
   @SubscribeMessage('driver:close-session')

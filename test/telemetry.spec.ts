@@ -1,8 +1,14 @@
+jest.mock('../src/catalog/route-geometry', () => ({
+  loadRouteGeometry: jest.fn((db: unknown, id: string) =>
+    jest.requireActual('../src/catalog/route').loadRoute(db, id),
+  ),
+}));
 import { DataSource, EntityManager } from 'typeorm';
 import { AuthUser } from '../src/auth/auth.service';
 import { TelemetryService } from '../src/telemetry/telemetry.service';
 import { TelemetryEvents } from '../src/telemetry/telemetry.events';
 import { LocationDto } from '../src/telemetry/telemetry.dto';
+import { loadRouteGeometry } from '../src/catalog/route-geometry';
 
 describe('Telemetry transaction rules', () => {
   const user: AuthUser = { id: 'driver', registrationNumber: '123', userType: 'driver' };
@@ -36,6 +42,7 @@ describe('Telemetry transaction rules', () => {
     );
     const manager = { query } as unknown as EntityManager;
     const db = {
+      query: jest.fn().mockResolvedValue([]),
       transaction: jest.fn(
         async (_isolation: string, cb: (tx: EntityManager) => Promise<unknown>) => cb(manager),
       ),
@@ -105,6 +112,13 @@ describe('Telemetry transaction rules', () => {
     const result = await service.ingest(user, dto, 'socket');
     expect(result.position).toEqual([-43.37, -21.77]);
     expect(result).not.toHaveProperty('driver_id');
+    expect(emit).toHaveBeenCalledWith({ name: 'passenger:location-update', data: result });
+  });
+  it('still broadcasts committed GPS when the routing provider fails', async () => {
+    jest.mocked(loadRouteGeometry).mockRejectedValueOnce(new Error('routing offline'));
+    const emit = jest.spyOn(events, 'emit');
+    const result = await service.ingest(user, sample(), 'socket');
+    expect(result.is_off_route).toBeUndefined();
     expect(emit).toHaveBeenCalledWith({ name: 'passenger:location-update', data: result });
   });
   it('fails closed if the plate is no longer authorized', async () => {

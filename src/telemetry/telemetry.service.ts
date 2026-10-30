@@ -10,8 +10,10 @@ import { Interval } from '@nestjs/schedule';
 import { DataSource, EntityManager } from 'typeorm';
 import { AuthUser } from '../auth/auth.service';
 import { mysqlCode, pointSql, pointWkt } from '../database/mysql';
-import { LocationDto, StartSessionDto } from './telemetry.dto';
+import { BatchLocationDto, LocationDto, StartSessionDto } from './telemetry.dto';
 import { BusOffline, LocationUpdate, TelemetryEvents } from './telemetry.events';
+import { loadRouteGeometry } from '../catalog/route-geometry';
+import { routeEta, distanceFromRoute } from './route-eta';
 interface SessionRow {
   id: string;
   driver_id: string;
@@ -21,11 +23,45 @@ interface SessionRow {
   last_sample_at: Date | null;
   last_seen_at: Date;
   closed_at: Date | null;
+  started_at: Date;
 }
 @Injectable()
 export class TelemetryService {
   private readonly logger = new Logger(TelemetryService.name);
   private expiring = false;
+  async arrivals(stopId: string) {
+    const buses = Object.values(await this.current());
+    const routes = new Map(
+      await Promise.all(
+        [...new Set(buses.map((b) => b.busLineId))].map(
+          async (id) => [id, await loadRouteGeometry(this.db, id).catch(() => [])] as const,
+        ),
+      ),
+    );
+    return buses
+      .flatMap<{
+        bus: LocationUpdate;
+        minutes: number | null;
+        meters: number | null;
+        status: string | null;
+        stopSequence?: number;
+      }>((bus) => {
+        if (
+          bus.is_off_route &&
+          routes.get(bus.busLineId)?.some((stop) => stop.busStopId === stopId)
+        )
+          return [{ bus, minutes: null, meters: null, status: 'Ônibus em desvio de rota' }];
+        const eta = routeEta(
+          routes.get(bus.busLineId) ?? [],
+          [bus.position[1], bus.position[0]],
+          bus.speed,
+          bus.headingTowards,
+          stopId,
+        );
+        return eta ? [{ bus, ...eta, status: null }] : [];
+      })
+      .sort((a, b) => (a.minutes ?? Infinity) - (b.minutes ?? Infinity));
+  }
   constructor(
     private readonly db: DataSource,
     private readonly events: TelemetryEvents,
@@ -145,6 +181,7 @@ export class TelemetryService {
       };
     });
     // Broadcast only after the transaction has committed.
+    await this.routeStatus(update);
     this.events.emit({ name: 'passenger:location-update', data: update });
     return update;
   }
@@ -156,6 +193,102 @@ export class TelemetryService {
       ]);
     });
     return { licensePlate: plate, expiresAfterSeconds: 30 };
+  }
+  async syncBatch(user: AuthUser, dto: BatchLocationDto, socketId?: string) {
+    // Accept original capture times, including samples older than the live 30s window.
+    const records = [...dto.records].sort(
+      (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp),
+    );
+    for (const record of records) {
+      const [lng, lat] = record.position;
+      const delta = Date.now() - Date.parse(record.timestamp);
+      if (
+        !Number.isFinite(lng) ||
+        !Number.isFinite(lat) ||
+        lng < -43.4 ||
+        lng > -43.3 ||
+        lat < -21.8 ||
+        lat > -21.7
+      )
+        throw new BadRequestException('GPS outside the UFJF/Juiz de Fora bounding box');
+      if (
+        !Number.isFinite(delta) ||
+        delta < -5000 ||
+        !/(Z|[+-]\d{2}:\d{2})$/.test(record.timestamp)
+      )
+        throw new BadRequestException(
+          'Timestamp must include timezone and cannot be in the future',
+        );
+    }
+    const update = await this.db.transaction('READ COMMITTED', async (tx) => {
+      const active = await this.ownedSession(tx, user, dto.licensePlate, socketId);
+      if (dto.busLineId && active.bus_line_id !== dto.busLineId)
+        throw new ConflictException('Bus line differs from session');
+      const source: SessionRow =
+        !dto.sessionId || dto.sessionId === active.id
+          ? active
+          : (
+              await tx.query('SELECT * FROM driver_sessions WHERE id=? FOR UPDATE', [dto.sessionId])
+            )[0];
+      if (
+        !source ||
+        source.driver_id !== user.id ||
+        source.license_plate !== dto.licensePlate ||
+        source.bus_line_id !== active.bus_line_id
+      )
+        throw new ForbiddenException(
+          'Buffered session does not belong to this driver, vehicle and line',
+        );
+      const latest = records[records.length - 1];
+      const previous = source.last_sample_at
+        ? new Date(source.last_sample_at).getTime()
+        : -Infinity;
+      const values = records.map(() => `(?,?,?,?,?,'circulating',${pointSql},?,?,?)`).join(',');
+      await tx.query(
+        `INSERT INTO bus_locations(id,session_id,license_plate,bus_line_id,driver_id,bus_status,location,speed,heading_towards,timestamp)
+        VALUES ${values} ON DUPLICATE KEY UPDATE id=bus_locations.id`,
+        records.flatMap((r) => [
+          randomUUID(),
+          source.id,
+          dto.licensePlate,
+          source.bus_line_id,
+          user.id,
+          pointWkt(r.position),
+          r.speed,
+          r.headingTowards,
+          new Date(r.timestamp),
+        ]),
+      );
+      await tx.query(
+        'UPDATE driver_sessions SET last_sample_at=GREATEST(COALESCE(last_sample_at,?),?) WHERE id=?',
+        [new Date(latest.timestamp), new Date(latest.timestamp), source.id],
+      );
+      await tx.query('UPDATE driver_sessions SET last_seen_at=UTC_TIMESTAMP(3) WHERE id=?', [
+        active.id,
+      ]);
+      const time = Date.parse(latest.timestamp);
+      if (
+        source.id !== active.id ||
+        time <= previous ||
+        Date.now() - time > 30000 ||
+        time < new Date(active.started_at).getTime() - 5000
+      )
+        return null;
+      return {
+        licensePlate: dto.licensePlate,
+        busLineId: active.bus_line_id,
+        busStatus: 'circulating' as const,
+        position: latest.position,
+        speed: latest.speed,
+        headingTowards: latest.headingTowards,
+        timestamp: new Date(latest.timestamp).toISOString(),
+      };
+    });
+    if (update) {
+      await this.routeStatus(update);
+      this.events.emit({ name: 'passenger:location-update', data: update });
+    }
+    return { accepted: records.length };
   }
   private async closeRow(tx: EntityManager, session: SessionRow) {
     await tx.query('UPDATE driver_sessions SET closed_at=UTC_TIMESTAMP(3) WHERE id=?', [
@@ -242,10 +375,11 @@ export class TelemetryService {
       JOIN bus_locations b ON b.id=(SELECT id FROM bus_locations WHERE session_id=s.id ORDER BY timestamp DESC LIMIT 1)
       WHERE s.closed_at IS NULL AND s.last_seen_at>TIMESTAMPADD(SECOND,-30,UTC_TIMESTAMP(3))
       AND u.is_active AND t.name IN ('driver','admin') AND p.is_active AND l.is_active AND b.bus_status='circulating'
+      AND b.timestamp>=TIMESTAMPADD(SECOND,-5,s.started_at)
       AND (? IS NULL OR s.bus_line_id=?)`,
       [busLineId ?? null, busLineId ?? null],
     );
-    return Object.fromEntries(
+    const result: Record<string, LocationUpdate> = Object.fromEntries(
       rows.map((row) => [
         row.license_plate,
         {
@@ -259,5 +393,17 @@ export class TelemetryService {
         },
       ]),
     );
+    await Promise.all(Object.values(result).map((bus) => this.routeStatus(bus)));
+    return result;
+  }
+  private async routeStatus(bus: LocationUpdate) {
+    try {
+      const route = await loadRouteGeometry(this.db, bus.busLineId);
+      const meters = distanceFromRoute(route, [bus.position[1], bus.position[0]]);
+      bus.is_off_route = meters === null ? undefined : meters > 100;
+    } catch {
+      // Routing failures must not prevent committed GPS updates from reaching passengers.
+      bus.is_off_route = undefined;
+    }
   }
 }
