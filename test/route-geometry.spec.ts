@@ -34,7 +34,9 @@ it('shares the curved closed geometry, retaining repeated stop boundaries and ca
   ]);
   expect(distanceFromRoute(route, [-21.775, -43.365])).toBe(0);
   expect(routeEta(route, [-21.775, -43.365], 20, 90, 'bcurved')).not.toBeNull();
-  expect(routeEta(route, [-21.772, -43.365], 20, 90, 'bcurved')).toBeNull();
+  expect(routeEta(route, [-21.772, -43.365], 20, 90, 'bcurved')).toMatchObject({
+    isAdjusted: true,
+  });
   expect(await loadRouteGeometry(source, 'line')).toEqual(route);
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(fetch.mock.calls[0][0]).toContain('steps=true');

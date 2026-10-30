@@ -7,6 +7,13 @@ function distance(a: Point, b: Point) {
     Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(((b[1] - a[1]) * rad) / 2) ** 2;
   return 6371008.8 * 2 * Math.asin(Math.sqrt(Math.min(1, h)));
 }
+interface RouteEtaResult {
+  minutes: number;
+  meters: number;
+  stopSequence: number;
+  isAdjusted?: boolean;
+  nearestStopId?: string;
+}
 // Project onto the nearest directed segment. Heading resolves ties at shared vertices.
 // Open routes stop at their end; closed circuits continue into the next lap.
 export function routeEta(
@@ -15,8 +22,31 @@ export function routeEta(
   speed: number,
   heading: number,
   stopId: string,
-) {
-  if ((distanceFromRoute(stops, position) ?? 0) > 100) return null;
+): RouteEtaResult | null {
+  if ((distanceFromRoute(stops, position) ?? 0) > 100) {
+    // Re-anchor to a real active stop, never a synthetic road vertex.
+    const nearest = stops
+      .filter((stop) => stop.busStopId)
+      .reduce<RouteStop | undefined>((best, stop) => {
+        const point: Point = [stop.position[1], stop.position[0]];
+        return !best ||
+          distance(position, point) < distance(position, [best.position[1], best.position[0]])
+          ? stop
+          : best;
+      }, undefined);
+    if (!nearest) return null;
+    const anchor: Point = [nearest.position[1], nearest.position[0]];
+    const onward = routeEta(stops, anchor, speed, heading, stopId);
+    if (!onward) return null;
+    const meters = onward.meters + distance(position, anchor);
+    return {
+      ...onward,
+      meters: Math.round(meters),
+      minutes: Math.ceil(meters / (((speed >= 5 ? speed : 20) * 1000) / 60)),
+      isAdjusted: true,
+      nearestStopId: nearest.busStopId,
+    };
+  }
   const route = stops.map((stop) => ({
     ...stop,
     position: [stop.position[1], stop.position[0]] as Point,

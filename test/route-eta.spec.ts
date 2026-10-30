@@ -47,8 +47,8 @@ describe('itinerary ETA', () => {
 });
 
 describe('route deviation', () => {
-  it('suspends ETA beyond 100m and resumes on return', () => {
-    expect(routeEta(route, [-21.782, -43.365], 20, 90, 'b')).toBeNull();
+  it('adjusts ETA from the nearest real stop beyond 100m and projects normally on return', () => {
+    expect(routeEta(route, [-21.782, -43.365], 20, 90, 'b')).toMatchObject({ isAdjusted: true });
     expect(routeEta(route, [-21.7805, -43.365], 20, 90, 'b')).not.toBeNull();
   });
   it('closes a loaded route once while preserving explicit return stops', async () => {
@@ -64,4 +64,18 @@ describe('route deviation', () => {
 it('continues a closed circuit to a stop on the next lap', () => {
   const closed = [...route, { ...route[0], stopSequence: 5 }];
   expect(routeEta(closed, [-21.775, -43.36], 20, 0, 'b')).not.toBeNull();
+});
+
+it('includes the off-route approach distance and ignores synthetic road vertices as anchors', () => {
+  const shaped = [
+    route[0],
+    { busStopId: '', stopSequence: 1, position: [-43.365, -21.78] as [number, number] },
+    route[1],
+  ];
+  const eta = routeEta(shaped, [-21.782, -43.365], 20, 90, 'b')!;
+  expect(eta.isAdjusted).toBe(true);
+  expect(['a', 'b']).toContain(eta.nearestStopId);
+  expect(eta.meters).toBeGreaterThan(500);
+  expect(eta.minutes).toBeGreaterThan(0);
+  expect(routeEta(shaped, [-21.782, -43.365], 20, 90, 'missing')).toBeNull();
 });

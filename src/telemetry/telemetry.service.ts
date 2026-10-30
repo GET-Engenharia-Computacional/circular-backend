@@ -46,11 +46,6 @@ export class TelemetryService {
         status: string | null;
         stopSequence?: number;
       }>((bus) => {
-        if (
-          bus.is_off_route &&
-          routes.get(bus.busLineId)?.some((stop) => stop.busStopId === stopId)
-        )
-          return [{ bus, minutes: null, meters: null, status: 'Ônibus em desvio de rota' }];
         const eta = routeEta(
           routes.get(bus.busLineId) ?? [],
           [bus.position[1], bus.position[0]],
@@ -58,7 +53,15 @@ export class TelemetryService {
           bus.headingTowards,
           stopId,
         );
-        return eta ? [{ bus, ...eta, status: null }] : [];
+        return eta
+          ? [
+              {
+                bus,
+                ...eta,
+                status: eta.isAdjusted ? 'Previsão ajustada à parada mais próxima' : null,
+              },
+            ]
+          : [];
       })
       .sort((a, b) => (a.minutes ?? Infinity) - (b.minutes ?? Infinity));
   }

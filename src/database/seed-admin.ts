@@ -2,6 +2,12 @@ import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import dataSource from './data-source';
 async function seed() {
+  if (process.argv.includes('--help')) {
+    console.log(
+      'seed:admin — configure ADMIN_REGISTRATION e ADMIN_PASSWORD (12–72 bytes). Preserva administradores existentes.',
+    );
+    return;
+  }
   const registration = process.env.ADMIN_REGISTRATION;
   const password = process.env.ADMIN_PASSWORD;
   if (!registration || !password || password.length < 12 || Buffer.byteLength(password) > 72)

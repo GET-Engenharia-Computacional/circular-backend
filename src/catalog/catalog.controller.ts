@@ -17,7 +17,6 @@ import { ActivationDto, IdParam, LineDto, PlaceDto, PlateDto, StopDto } from './
 import { previewRoadRoute } from './road-route';
 import { CatalogService } from './catalog.service';
 import { BusStopsService } from './bus-stops.service';
-import { AdminRoutesService } from './admin-routes.service';
 import { CampusPlacesService } from './campus-places.service';
 import { PatchPlaceDto } from './campus-places.dto';
 import { AdminPasswordGuard } from '../auth/admin-password.guard';
@@ -27,7 +26,6 @@ export class CatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly stops: BusStopsService,
-    private readonly routes: AdminRoutesService,
     private readonly campusPlaces: CampusPlacesService,
     private readonly deletion: AdminDeletionService,
   ) {}

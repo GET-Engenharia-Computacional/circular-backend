@@ -18,6 +18,12 @@ function ack(socket: Socket, event: string, payload: object): Promise<unknown> {
   });
 }
 async function main() {
+  if (process.argv.includes('--help')) {
+    console.log(
+      'simulate:driver — API_URL, DRIVER_TOKEN e LICENSE_PLATE; BUS_LINE_CODE (padrão 03) ou BUS_LINE_ID; SIMULATION_LAPS=0 contínuo.',
+    );
+    return;
+  }
   const token = process.env.DRIVER_TOKEN;
   const licensePlate = process.env.LICENSE_PLATE;
   if (!token || !licensePlate)

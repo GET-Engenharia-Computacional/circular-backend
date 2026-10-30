@@ -6,7 +6,7 @@ import { DataSource } from 'typeorm';
 import { TelemetryService } from '../src/telemetry/telemetry.service';
 import { TelemetryEvents } from '../src/telemetry/telemetry.events';
 
-it('suspends arrivals while off route and restores them on return without hiding the bus', async () => {
+it('adjusts arrivals while off route and restores normal projection without hiding GPS', async () => {
   let lat = -21.782;
   const query = jest.fn(async (sql: string) =>
     sql.includes('FROM bus_line_stops')
@@ -29,11 +29,11 @@ it('suspends arrivals while off route and restores them on return without hiding
   const service = new TelemetryService({ query } as unknown as DataSource, new TelemetryEvents());
   const off = await service.arrivals('b');
   expect(off[0]).toMatchObject({
-    minutes: null,
-    meters: null,
-    status: 'Ônibus em desvio de rota',
+    status: 'Previsão ajustada à parada mais próxima',
     bus: { is_off_route: true, position: [-43.365, lat] },
   });
+  expect(off[0].minutes).toBeGreaterThan(0);
+  expect(off[0].meters).toBeGreaterThan(0);
   lat = -21.7801;
   const back = await service.arrivals('b');
   expect(back[0].bus.is_off_route).toBe(false);

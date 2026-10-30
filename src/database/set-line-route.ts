@@ -5,7 +5,6 @@ async function main() {
   const [lineId, ...stopIds] = process.argv.slice(2);
   if (!lineId || stopIds.length < 2)
     throw new Error('Usage: npm run route:set -- LINE_UUID STOP_UUID STOP_UUID ...');
-  if (new Set(stopIds).size !== stopIds.length) throw new Error('Stops in a line must be unique');
   await db.initialize();
   try {
     await db.transaction(async (tx) => {
