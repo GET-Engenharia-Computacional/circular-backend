@@ -19,9 +19,10 @@ interface RouteEtaResult {
 export function routeEta(
   stops: RouteStop[],
   position: Point,
-  speed: number,
+  forecastSpeed: number,
   heading: number,
   stopId: string,
+  stopped = false,
 ): RouteEtaResult | null {
   if ((distanceFromRoute(stops, position) ?? 0) > 100) {
     // Re-anchor to a real active stop, never a synthetic road vertex.
@@ -36,13 +37,13 @@ export function routeEta(
       }, undefined);
     if (!nearest) return null;
     const anchor: Point = [nearest.position[1], nearest.position[0]];
-    const onward = routeEta(stops, anchor, speed, heading, stopId);
+    const onward = routeEta(stops, anchor, forecastSpeed, heading, stopId);
     if (!onward) return null;
     const meters = onward.meters + distance(position, anchor);
     return {
       ...onward,
       meters: Math.round(meters),
-      minutes: Math.ceil(meters / (((speed >= 5 ? speed : 20) * 1000) / 60)),
+      minutes: Math.ceil(meters / ((forecastSpeed * 1000) / 60)),
       isAdjusted: true,
       nearestStopId: nearest.busStopId,
     };
@@ -73,17 +74,26 @@ export function routeEta(
   if (!best) return null;
   let meters = best.remaining;
   const start = route[best.index];
-  if (start.busStopId === stopId && distance(position, start.position) < 2)
-    return { minutes: 0, meters: 0, stopSequence: start.stopSequence };
+  const arrivalRadius = stopped ? 15 : 2;
+  let backward = distance(start.position, route[best.index + 1].position) - meters;
+  for (let i = best.index; i >= 0 && backward <= arrivalRadius; i--) {
+    const stop = route[i];
+    if (stop.busStopId === stopId && distance(position, stop.position) <= arrivalRadius)
+      return { minutes: 0, meters: 0, stopSequence: stop.stopSequence };
+    if (i > 0) backward += distance(route[i - 1].position, stop.position);
+  }
   // A closed circuit may reach a stop again on the next lap.
   if (route[0].busStopId === route[route.length - 1].busStopId) route.push(...route.slice(1));
   for (let j = best.index + 1; j < route.length; j++) {
-    if (route[j].busStopId === stopId)
+    if (route[j].busStopId === stopId) {
+      if (meters <= arrivalRadius && distance(position, route[j].position) <= arrivalRadius)
+        return { minutes: 0, meters: 0, stopSequence: route[j].stopSequence };
       return {
-        minutes: Math.ceil(meters / (((speed >= 5 ? speed : 20) * 1000) / 60)),
+        minutes: Math.ceil(meters / ((forecastSpeed * 1000) / 60)),
         meters: Math.round(meters),
         stopSequence: start.stopSequence,
       };
+    }
     if (j + 1 < route.length) meters += distance(route[j].position, route[j + 1].position);
   }
   return null;

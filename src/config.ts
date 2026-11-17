@@ -8,7 +8,7 @@ export function jwtSecret(): string {
 }
 
 export const corsOrigins = () =>
-  (process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://localhost:3001')
+  (process.env.CORS_ORIGINS ?? '*')
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean);

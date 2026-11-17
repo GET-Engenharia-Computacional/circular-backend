@@ -12,6 +12,7 @@ import { AuthUser } from '../auth/auth.service';
 import { mysqlCode, pointSql, pointWkt } from '../database/mysql';
 import { BatchLocationDto, LocationDto, StartSessionDto } from './telemetry.dto';
 import { BusOffline, LocationUpdate, TelemetryEvents } from './telemetry.events';
+import type { RouteStop } from '../catalog/route';
 import { loadRouteGeometry } from '../catalog/route-geometry';
 import { routeEta, distanceFromRoute } from './route-eta';
 interface SessionRow {
@@ -29,15 +30,32 @@ interface SessionRow {
 export class TelemetryService {
   private readonly logger = new Logger(TelemetryService.name);
   private expiring = false;
-  async arrivals(stopId: string) {
-    const buses = Object.values(await this.current());
-    const routes = new Map(
-      await Promise.all(
-        [...new Set(buses.map((b) => b.busLineId))].map(
-          async (id) => [id, await loadRouteGeometry(this.db, id).catch(() => [])] as const,
-        ),
-      ),
+  private readonly forecastByPlate = new Map<
+    string,
+    { sessionId: string; latest: number; moving: { time: number; speed: number }[]; speed: number }
+  >();
+
+  private recordForecast(bus: LocationUpdate, sessionId: string) {
+    const latest = Date.parse(bus.timestamp);
+    const previous = this.forecastByPlate.get(bus.licensePlate);
+    if (previous && previous.latest >= latest) return;
+    const moving = (previous?.sessionId === sessionId ? previous.moving : []).filter(
+      ({ time }) => time >= latest - 30_000,
     );
+    if (bus.speed > 0) moving.push({ time: latest, speed: bus.speed });
+    const samples = moving.slice(-30);
+    // Anchor sparse or low-speed samples to the nominal speed without a discontinuity at 5 km/h.
+    const weight = samples.reduce((sum, sample) => sum + Math.min(1, sample.speed / 10), 0);
+    const weightedSpeed = samples.reduce(
+      (sum, sample) => sum + sample.speed * Math.min(1, sample.speed / 10),
+      0,
+    );
+    const speed = Math.max(8, (40 + weightedSpeed) / (2 + weight));
+    this.forecastByPlate.set(bus.licensePlate, { sessionId, latest, moving: samples, speed });
+  }
+  async arrivals(stopId: string) {
+    const buses = Object.values(await this.loadCurrentLocations());
+    const routes = await this.loadRoutes(buses);
     return buses
       .flatMap<{
         bus: LocationUpdate;
@@ -46,12 +64,20 @@ export class TelemetryService {
         status: string | null;
         stopSequence?: number;
       }>((bus) => {
+        const route = routes.get(bus.busLineId) ?? [];
+        if (!route.some((stop) => stop.busStopId === stopId)) return [];
+        this.setRouteStatus(bus, route);
+        const timestamp = Date.parse(bus.timestamp);
+        if (Date.now() - timestamp > 30_000)
+          return [{ bus, minutes: null, meters: null, status: 'Previsão indisponível' }];
+        const forecast = this.forecastByPlate.get(bus.licensePlate);
         const eta = routeEta(
-          routes.get(bus.busLineId) ?? [],
+          route,
           [bus.position[1], bus.position[0]],
-          bus.speed,
+          forecast?.latest === timestamp ? forecast.speed : 20,
           bus.headingTowards,
           stopId,
+          bus.speed === 0,
         );
         return eta
           ? [
@@ -149,7 +175,7 @@ export class TelemetryService {
       throw new BadRequestException(
         'Timestamp must include timezone and be between 30s old and 5s in the future',
       );
-    const update = await this.db.transaction('READ COMMITTED', async (tx) => {
+    const { update, sessionId } = await this.db.transaction('READ COMMITTED', async (tx) => {
       const session = await this.ownedSession(tx, user, dto.licensePlate, socketId);
       if (session.bus_line_id !== dto.busLineId)
         throw new ConflictException('Bus line differs from session');
@@ -173,7 +199,7 @@ export class TelemetryService {
         'UPDATE driver_sessions SET last_seen_at=UTC_TIMESTAMP(3),last_sample_at=? WHERE id=?',
         [sample, session.id],
       );
-      return {
+      const update = {
         licensePlate: dto.licensePlate,
         busLineId: dto.busLineId,
         busStatus: 'circulating' as const,
@@ -182,10 +208,9 @@ export class TelemetryService {
         headingTowards: dto.headingTowards,
         timestamp: sample.toISOString(),
       };
+      return { update, sessionId: session.id };
     });
-    // Broadcast only after the transaction has committed.
-    await this.routeStatus(update);
-    this.events.emit({ name: 'passenger:location-update', data: update });
+    await this.publishLocation(update, sessionId);
     return update;
   }
   async heartbeat(user: AuthUser, plate: string, socketId?: string) {
@@ -277,7 +302,7 @@ export class TelemetryService {
         time < new Date(active.started_at).getTime() - 5000
       )
         return null;
-      return {
+      const update = {
         licensePlate: dto.licensePlate,
         busLineId: active.bus_line_id,
         busStatus: 'circulating' as const,
@@ -286,11 +311,9 @@ export class TelemetryService {
         headingTowards: latest.headingTowards,
         timestamp: new Date(latest.timestamp).toISOString(),
       };
+      return { update, sessionId: active.id };
     });
-    if (update) {
-      await this.routeStatus(update);
-      this.events.emit({ name: 'passenger:location-update', data: update });
-    }
+    if (update) await this.publishLocation(update.update, update.sessionId);
     return { accepted: records.length };
   }
   private async closeRow(tx: EntityManager, session: SessionRow) {
@@ -362,6 +385,14 @@ export class TelemetryService {
     }
   }
   async current(busLineId?: string): Promise<Record<string, LocationUpdate>> {
+    const locations = await this.loadCurrentLocations(busLineId);
+    const buses = Object.values(locations);
+    const routes = await this.loadRoutes(buses);
+    for (const bus of buses) this.setRouteStatus(bus, routes.get(bus.busLineId) ?? []);
+    return locations;
+  }
+
+  private async loadCurrentLocations(busLineId?: string): Promise<Record<string, LocationUpdate>> {
     const rows: {
       license_plate: string;
       bus_line_id: string;
@@ -382,7 +413,7 @@ export class TelemetryService {
       AND (? IS NULL OR s.bus_line_id=?)`,
       [busLineId ?? null, busLineId ?? null],
     );
-    const result: Record<string, LocationUpdate> = Object.fromEntries(
+    return Object.fromEntries(
       rows.map((row) => [
         row.license_plate,
         {
@@ -396,17 +427,28 @@ export class TelemetryService {
         },
       ]),
     );
-    await Promise.all(Object.values(result).map((bus) => this.routeStatus(bus)));
-    return result;
   }
-  private async routeStatus(bus: LocationUpdate) {
-    try {
-      const route = await loadRouteGeometry(this.db, bus.busLineId);
-      const meters = distanceFromRoute(route, [bus.position[1], bus.position[0]]);
-      bus.is_off_route = meters === null ? undefined : meters > 100;
-    } catch {
-      // Routing failures must not prevent committed GPS updates from reaching passengers.
-      bus.is_off_route = undefined;
-    }
+
+  private async loadRoutes(buses: LocationUpdate[]) {
+    const lineIds = new Set(buses.map((bus) => bus.busLineId));
+    return new Map(
+      await Promise.all([...lineIds].map(async (id) => [id, await this.loadRoute(id)] as const)),
+    );
+  }
+
+  private loadRoute(lineId: string) {
+    // Routing failures must not prevent committed GPS updates from reaching passengers.
+    return loadRouteGeometry(this.db, lineId).catch(() => []);
+  }
+
+  private setRouteStatus(bus: LocationUpdate, route: RouteStop[]) {
+    const meters = distanceFromRoute(route, [bus.position[1], bus.position[0]]);
+    bus.is_off_route = meters === null ? undefined : meters > 100;
+  }
+
+  private async publishLocation(bus: LocationUpdate, sessionId: string) {
+    this.recordForecast(bus, sessionId);
+    this.setRouteStatus(bus, await this.loadRoute(bus.busLineId));
+    this.events.emit({ name: 'passenger:location-update', data: bus });
   }
 }
